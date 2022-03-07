@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Elf",
+        "img": "D:\\PyCharmProjects\\game1\\sprite\\elf.png"
+    },
+    {
+        "name": "Treant",
+        "img": "D:\\PyCharmProjects\\game1\\sprite\\treant.png"
+    },
+    {
+        "name": "Lifestealer",
+        "img": "D:\\PyCharmProjects\\game1\\sprite\\lifestealer.png"
+    }
+]
