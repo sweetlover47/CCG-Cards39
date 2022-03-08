@@ -11,6 +11,8 @@ class CardPosition(Enum):
 class GameManager:
     decks = {}
     positions = {}
+    turn: int
+    attack_target = (-1, -1)
 
     def add_deck(self, deck):
         for _card in deck:
@@ -22,9 +24,11 @@ class GameManager:
                                         CardPosition.RIGHT_FRONT,
                                         CardPosition.RIGHT_REAR])))
 
-    def move(self, card_id, target_card_id):
-        self.decks[card_id].do_attack(self.decks[target_card_id])
+    def move(self):
+        self.decks[self.attack_target[0]].do_attack(self.decks[self.attack_target[1]])
         self.check_alive()
+        self.attack_target = (-1, -1)
+        self.turn = (self.turn + 1) % 2
 
     def check_alive(self):
         for _id, _card in self.decks.items():

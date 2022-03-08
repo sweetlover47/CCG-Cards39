@@ -7,6 +7,16 @@ import pygame
 import card
 import game_manager
 
+gm = game_manager.GameManager()
+
+
+
+###########
+def print_status():
+    for _id, _card in gm.decks.items():
+        print('ID', _id, '###', _card.__class__.__name__, ': ♥', _card.current_health, '\u2694', _card.current_attack)
+
+###########
 
 #################
 # 140#440#920#1220 x
@@ -24,21 +34,53 @@ class PositionCoordinates(Enum):
 
 
 class CardSprite(pygame.sprite.Sprite):
-    def __init__(self, img, pos: game_manager.CardPosition, owner_id: int):
+    _card: card.ICard
+
+    def __init__(self, img: pygame.Surface, pos: game_manager.CardPosition, _card: card.ICard):
         pygame.sprite.Sprite.__init__(self)
-        self.image = img if not owner_id else pygame.transform.flip(img, True, False)
+        self._card = _card
+        self.image = img if not _card.owner_id else pygame.transform.flip(img, True, False)
         self.rect = self.image.get_rect()
         self.rect.center = PositionCoordinates.__getattribute__(PositionCoordinates, pos.name).value
-        self.rect.center = (WIDTH * owner_id + (-1) ** owner_id * self.rect.centerx,
-                            HEIGHT * owner_id + (-1) ** owner_id * self.rect.centery)
+        self.rect.center = (WIDTH * _card.owner_id + (-1) ** _card.owner_id * self.rect.centerx,
+                            HEIGHT * _card.owner_id + (-1) ** _card.owner_id * self.rect.centery)
 
     def update(self):
         pass
+
+    def choose_card(self, pos):
+        if self._card.owner_id == gm.turn:
+            if gm.attack_target[1] == -1:
+                # If chose own card first time then it increase the sprite size
+                # Also set flag choosing which card would be attacking
+                print('Choose which card you would like to attack')
+                self.image = pygame.transform.scale(self.image, (SPRITE_SIZE * 1.5, SPRITE_SIZE * 1.5))
+                self.rect = self.image.get_rect() # TODO Extract to private method or refactor code logic
+                self.rect.center = PositionCoordinates.__getattribute__(PositionCoordinates, pos.name).value
+                self.rect.center = (WIDTH * self._card.owner_id + (-1) ** self._card.owner_id * self.rect.centerx,
+                                    HEIGHT * self._card.owner_id + (-1) ** self._card.owner_id * self.rect.centery)
+                gm.attack_target = ([k for k, v in gm.decks.items() if v == self._card][0], -1)
+            else:
+                # Chose own card second time as target
+                print('If I can heal than I do it')
+        elif gm.attack_target[0] != -1:
+            # Chose enemy's card as target
+            gm.attack_target = (gm.attack_target[0], [k for k, v in gm.decks.items() if v == self._card][0])
+            gm.move()
+            self.image = pygame.transform.scale(self.image, (SPRITE_SIZE / 1.5, SPRITE_SIZE / 1.5)) # TODO It changes target card size, need to resize previous card from gm.attack_target[0]
+            self.rect = self.image.get_rect()
+            self.rect.center = PositionCoordinates.__getattribute__(PositionCoordinates, pos.name).value
+            self.rect.center = (WIDTH * self._card.owner_id + (-1) ** self._card.owner_id * self.rect.centerx,
+                                HEIGHT * self._card.owner_id + (-1) ** self._card.owner_id * self.rect.centery)
+        else:
+            print('It\'s not your card!')
+        print_status()
 
 
 WIDTH = 1360
 HEIGHT = 580
 FPS = 10
+SPRITE_SIZE = 240
 background = [120, 120, 120]
 sprite_dir = os.path.join(os.path.dirname(__file__), 'sprite')
 
@@ -53,7 +95,6 @@ clock = pygame.time.Clock()
 # sprite_treant = pygame.image.load(os.path.join(sprite_dir, 'treant.png')).convert()
 
 sprite_group = pygame.sprite.Group()
-gm = game_manager.GameManager()
 
 gm.add_deck([card.BattleTreant(0), card.BattleElf(0), card.BattleTreant(0)])
 gm.add_deck([card.BattleElf(1), card.BattleTreant(1)])
@@ -68,18 +109,25 @@ for _id, _card in gm.decks.items():
     sprites[(gm.positions[_id], _card.owner_id)] = CardSprite(
         pygame.image.load(card_sprites[_card.__class__.__name__[6:]]).convert(),
         gm.positions[_id],
-        _card.owner_id)
+        _card)
 
 sprite_group.add(sprites.values())
 
+gm.turn = 0
 running = True
 while running:
     clock.tick(FPS)
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             running = False
+        if e.type == pygame.MOUSEBUTTONUP:
+            for sp in sprite_group:
+                if sp.rect.collidepoint(pygame.mouse.get_pos()):
+                    sp.choose_card(*[k[0] for k, v in sprites.items() if v == sp])
+
     sprite_group.update()
 
+    screen.fill(background)
     sprite_group.draw(screen)
     pygame.display.flip()
 
